@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<JUCERPROJECT id="lJZ92n" name="LEDSignViz" projectType="audioplug" version="1.0.0"
+              bundleIdentifier="edu.washington.cs.supersat.LEDSignViz" buildVST="1"
+              buildRTAS="0" buildAU="0" pluginName="LEDSignViz" pluginDesc="LEDSignViz"
+              pluginManufacturer="Karl Koscher" pluginManufacturerCode="KOSK"
+              pluginCode="LSVZ" pluginChannelConfigs="{1, 1}, {2, 2}" pluginIsSynth="0"
+              pluginWantsMidiIn="1" pluginProducesMidiOut="0" pluginSilenceInIsSilenceOut="0"
+              pluginTailLength="0" pluginEditorRequiresKeys="0" pluginAUExportPrefix="LEDSignVizAU"
+              pluginAUViewClass="LEDSignVizAU_V1" pluginRTASCategory="" jucerVersion="3.0.0"
+              companyName="Karl Koscher">
+  <EXPORTFORMATS>
+    <VS2010 targetFolder="Builds/VisualStudio2010" libraryType="1" juceFolder="..\..\..\..\Downloads\juce\modules"
+            vstFolder="C:\Users\supersat\Downloads\vstsdk2.4" extraCompilerFlags="/I&quot;C:\Users\supersat\Downloads\fftw-3.3.2\x86&quot;"
+            extraLinkerFlags="&quot;C:\Users\supersat\Downloads\fftw-3.3.2\x86\libfftw3f-3.lib&quot;">
+      <CONFIGURATIONS>
+        <CONFIGURATION name="Debug" winWarningLevel="4" generateManifest="1" winArchitecture="32-bit"
+                       isDebug="1" optimisation="1" targetName="LEDSignViz"/>
+        <CONFIGURATION name="Release" winWarningLevel="4" generateManifest="1" winArchitecture="32-bit"
+                       isDebug="0" optimisation="2" targetName="LEDSignViz"/>
+      </CONFIGURATIONS>
+    </VS2010>
+  </EXPORTFORMATS>
+  <MAINGROUP id="a47E4J" name="LEDSignViz">
+    <GROUP id="{2880DE35-7C4E-E4B9-B8B0-97252F807A00}" name="Source">
+      <FILE id="EWNBlK" name="SerialThread.cpp" compile="1" resource="0"
+            file="Source/SerialThread.cpp"/>
+      <FILE id="Tg2pMg" name="SerialThread.h" compile="0" resource="0" file="Source/SerialThread.h"/>
+      <FILE id="jVH1Fi" name="SpectrumFFT.h" compile="0" resource="0" file="Source/SpectrumFFT.h"/>
+      <FILE id="YIqmjW" name="SpectrumFFT.cpp" compile="1" resource="0" file="Source/SpectrumFFT.cpp"/>
+      <FILE id="L2aXC4" name="PluginProcessor.cpp" compile="1" resource="0"
+            file="Source/PluginProcessor.cpp"/>
+      <FILE id="IMRBmD" name="PluginProcessor.h" compile="0" resource="0"
+            file="Source/PluginProcessor.h"/>
+      <FILE id="br0cKX" name="PluginEditor.cpp" compile="1" resource="0"
+            file="Source/PluginEditor.cpp"/>
+      <FILE id="ylzDRq" name="PluginEditor.h" compile="0" resource="0" file="Source/PluginEditor.h"/>
+    </GROUP>
+  </MAINGROUP>
+  <MODULES>
+    <MODULE id="juce_gui_audio" showAllCode="1" useLocalCopy="1"/>
+    <MODULE id="juce_audio_plugin_client" showAllCode="1" useLocalCopy="1"/>
+    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="1"/>
+    <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="1"/>
+    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="1"/>
+    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="1"/>
+    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="1"/>
+    <MODULE id="juce_events" showAllCode="1" useLocalCopy="1"/>
+    <MODULE id="juce_core" showAllCode="1" useLocalCopy="1"/>
+    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="1"/>
+  </MODULES>
+  <JUCEOPTIONS JUCE_QUICKTIME="disabled"/>
+</JUCERPROJECT>
