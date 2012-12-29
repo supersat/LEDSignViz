@@ -12,7 +12,7 @@
   <EXPORTFORMATS>
     <VS2010 targetFolder="Builds/VisualStudio2010" libraryType="1" juceFolder="..\..\..\..\Downloads\juce\modules"
             vstFolder="C:\Users\supersat\Downloads\vstsdk2.4" extraCompilerFlags="/I&quot;C:\Users\supersat\Downloads\fftw-3.3.2\x86&quot;"
-            extraLinkerFlags="&quot;C:\Users\supersat\Downloads\fftw-3.3.2\x86\libfftw3f-3.lib&quot;">
+            extraLinkerFlags="&quot;C:\Users\supersat\Downloads\fftw-3.3.2\x86\libfftw3f-3.lib&quot; setupapi.lib">
       <CONFIGURATIONS>
         <CONFIGURATION name="Debug" winWarningLevel="4" generateManifest="1" winArchitecture="32-bit"
                        isDebug="1" optimisation="1" targetName="LEDSignViz"/>
@@ -23,11 +23,33 @@
   </EXPORTFORMATS>
   <MAINGROUP id="a47E4J" name="LEDSignViz">
     <GROUP id="{2880DE35-7C4E-E4B9-B8B0-97252F807A00}" name="Source">
+      <FILE id="XH2qbL" name="MacOSXSerialPortManager.cpp" compile="1" resource="0"
+            file="Source/MacOSXSerialPortManager.cpp"/>
+      <FILE id="pFPsCR" name="MacOSXSerialPortManager.h" compile="0" resource="0"
+            file="Source/MacOSXSerialPortManager.h"/>
+      <FILE id="qigZG8" name="Win32SerialPortManager.cpp" compile="1" resource="0"
+            file="Source/Win32SerialPortManager.cpp"/>
+      <FILE id="cTP29Z" name="Win32SerialPortManager.h" compile="0" resource="0"
+            file="Source/Win32SerialPortManager.h"/>
+      <FILE id="DgDmeP" name="PlatformSerialPortManager.cpp" compile="1"
+            resource="0" file="Source/PlatformSerialPortManager.cpp"/>
+      <FILE id="iRFF6S" name="PlatformSerialPortManager.h" compile="0" resource="0"
+            file="Source/PlatformSerialPortManager.h"/>
+      <FILE id="iYEKiQ" name="MacOSXSerialPort.cpp" compile="1" resource="0"
+            file="Source/MacOSXSerialPort.cpp"/>
+      <FILE id="jdUWjs" name="MacOSXSerialPort.h" compile="0" resource="0"
+            file="Source/MacOSXSerialPort.h"/>
+      <FILE id="ABBXsw" name="PlatformSerialPort.h" compile="0" resource="0"
+            file="Source/PlatformSerialPort.h"/>
+      <FILE id="jhnrHN" name="Win32SerialPort.cpp" compile="1" resource="0"
+            file="Source/Win32SerialPort.cpp"/>
+      <FILE id="A3XlYy" name="Win32SerialPort.h" compile="0" resource="0"
+            file="Source/Win32SerialPort.h"/>
       <FILE id="EWNBlK" name="SerialThread.cpp" compile="1" resource="0"
             file="Source/SerialThread.cpp"/>
       <FILE id="Tg2pMg" name="SerialThread.h" compile="0" resource="0" file="Source/SerialThread.h"/>
       <FILE id="jVH1Fi" name="SpectrumFFT.h" compile="0" resource="0" file="Source/SpectrumFFT.h"/>
-      <FILE id="YIqmjW" name="SpectrumFFT.cpp" compile="1" resource="0" file="Source/SpectrumFFT.cpp"/>
+      <FILE id="YIqmjW" name="SpectrumFFT.cpp" compile="0" resource="0" file="Source/SpectrumFFT.cpp"/>
       <FILE id="L2aXC4" name="PluginProcessor.cpp" compile="1" resource="0"
             file="Source/PluginProcessor.cpp"/>
       <FILE id="IMRBmD" name="PluginProcessor.h" compile="0" resource="0"

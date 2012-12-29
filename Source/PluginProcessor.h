@@ -1,11 +1,27 @@
 /*
-  ==============================================================================
+==============================================================================
 
-    This file was auto-generated!
+LEDSignViz -- A VST/AU plugin for visualizing music on supported LED signs.
 
-    It contains the basic startup code for a Juce application.
+PluginProcessor.h: Visualizes incoming samples. The core of the plugin.
 
-  ==============================================================================
+Copyright (C) 2012  Karl Koscher
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+==============================================================================
 */
 
 #ifndef __PLUGINPROCESSOR_H_2944184C__
@@ -15,13 +31,19 @@
 #include "SpectrumFFT.h"
 #include "SerialThread.h"
 #include <fftw3.h>
-
-#define MAX_SIGN_WIDTH  200
-#define MAX_SIGN_HEIGHT 24
+#include <vector>
 
 //==============================================================================
 /**
 */
+
+enum ImageOp {
+	NONE,
+	OVERLAY_WITH_ALPHA,
+	MULTIPLY,
+	MULTIPLY_INVERSE,
+};
+
 class LedsignVizAudioProcessor  : public AudioProcessor
 {
 public:
@@ -70,24 +92,43 @@ public:
     void setStateInformation (const void* data, int sizeInBytes);
 
 	//==============================================================================
-	char bitmap[MAX_SIGN_HEIGHT][MAX_SIGN_WIDTH];
+	unsigned int *bitmap;
+	unsigned int *preImageBitmap;
 	CriticalSection bitmapLock;
-
-	SpectrumFFT fft;
 	int signWidth;
 	int signHeight;
-	int samplesPerBlock;
+
+	// These are set from the editor
 	float smoothingFactor;
-	float *fftRollingAvg;
 	float gamma;
 	float powerInterval;
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LedsignVizAudioProcessor);
 
+	void loadImage(String filename);
+	void applyImage(unsigned int *localBitmap);
+
+	void spectrumViz(AudioSampleBuffer& buffer, unsigned int *localBitmap);
+	void horizontalSpectrogramViz(AudioSampleBuffer& buffer, unsigned int *localBitmap);
+	void verticalSpectrogramViz(AudioSampleBuffer& buffer, unsigned int *localBitmap);
+	void stereoWaveform(AudioSampleBuffer& buffer, unsigned int *localBitmap);
+	void stereoVU(AudioSampleBuffer& buffer, unsigned int *localBitmap);
+
+	// SpectrumFFT fft;
+	int currentProgram;
+
 	fftwf_plan fftPlan;
 	fftwf_complex *fftIn, *fftOut;
 	float *windowFunction;
+	float *fftRollingAvg;
+	int samplesPerBlock;
+
+	StringArray imageNames;
+	std::vector<Image> images;
+	ImageOp curImageOp;
+	Image *curImage;
+
 	LedsignVizSerialThread serialThread;
 };
 

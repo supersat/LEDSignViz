@@ -1,52 +1,57 @@
 /*
 ==============================================================================
 
-SerialThread.cpp
-Created: 7 Dec 2012 3:56:00am
-Author:  supersat
+LEDSignViz -- A VST/AU plugin for visualizing music on supported LED signs.
+
+SerialThread.cpp: Converts and streams visualization graphics to the LED signs.
+
+Copyright (C) 2012  Karl Koscher
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 ==============================================================================
 */
 
 #include "SerialThread.h"
 #include "PluginProcessor.h"
-#include <Windows.h>
+
+#ifdef _WIN32
+#include "Win32SerialPort.h"
+#endif
 
 LedsignVizSerialThread::LedsignVizSerialThread(LedsignVizAudioProcessor* owner) : Thread("Serial Port Thread"), processor(owner)
 {
+#ifdef _WIN32
+	serialPort = new Win32SerialPort();
+#endif
 }
 
 LedsignVizSerialThread::~LedsignVizSerialThread() {
+	delete serialPort;
 }
 
-#define SIGN_HEIGHT 16
-#define SIGN_WIDTH 160
-
 void LedsignVizSerialThread::run() {
-	HANDLE hComPort;
-	DCB dcb;
-	DWORD bytesWritten;
+	unsigned int *localBitmap = new unsigned int[processor->signWidth * processor->signHeight];
 
-	char localBitmap[MAX_SIGN_HEIGHT][MAX_SIGN_WIDTH];
-
-	int bufSize = SIGN_HEIGHT * SIGN_WIDTH / 8;
+	int bufSize = processor->signHeight * processor->signWidth / 8;
 	char* redBuf = new char[bufSize];
 	char* greenBuf = new char[bufSize];
-	unsigned int count;
+	int count = 0;
 
 	while (!threadShouldExit()) {
-		hComPort = CreateFile(TEXT("\\\\.\\COM15"), GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
-		if (hComPort != INVALID_HANDLE_VALUE) {
-			dcb.DCBlength = sizeof(DCB);
-			GetCommState(hComPort, &dcb);
-			dcb.BaudRate = 2000000;
-			dcb.ByteSize = 8;
-			dcb.fBinary = TRUE;
-			dcb.fParity = FALSE;
-			dcb.StopBits = ONESTOPBIT;
-			dcb.Parity = NOPARITY;
-			dcb.fOutxDsrFlow = TRUE;
-			SetCommState(hComPort, &dcb);
+		if (serialPort->openSerialPort("\\\\.\\COM15")) {
 
 			while (!threadShouldExit()) {
 				processor->bitmapLock.enter();
@@ -58,37 +63,31 @@ void LedsignVizSerialThread::run() {
 
 				for (int y = 0; y < processor->signHeight; y++) {
 					for (int x = 0; x < processor->signWidth; x++) {
-						unsigned char color = localBitmap[processor->signHeight - y - 1][x];
-						/*
-						if (localBitmap[processor->signHeight - y - 1][x]) {
-							if (y < (int)(processor->signHeight * .75))
-								greenBuf[(processor->signWidth / 8) * y + (x / 8)] |= 1 << (7 - (x % 8));
-							if (y >= (int)(processor->signHeight * .50))
-								redBuf[(processor->signWidth / 8) * y + (x / 8)] |= 1 << (7 - (x % 8));
-						}
-						*/
-						if ((color & 0xc0) > (count << 6))
+						unsigned int color = localBitmap[(processor->signHeight - y - 1) * processor->signWidth + x];
+
+						if ((color & 0xc000) > (count << 14))
 							redBuf[(processor->signWidth / 8) * y + (x / 8)] |= 1 << (7 - (x % 8));
-						if ((color & 0xc) > (count << 2))
+						if ((color & 0xc0) > (count << 6))
 							greenBuf[(processor->signWidth / 8) * y + (x / 8)] |= 1 << (7 - (x % 8));
 					}
 				}
 
-				if (!WriteFile(hComPort, "SC", 2, &bytesWritten, NULL) ||
-					!WriteFile(hComPort, redBuf, bufSize, &bytesWritten, NULL) ||
-					!WriteFile(hComPort, greenBuf, bufSize, &bytesWritten, NULL)) {
+				if (!serialPort->sendBytes("SC", 2) ||
+					!serialPort->sendBytes(redBuf, bufSize) ||
+					!serialPort->sendBytes(greenBuf, bufSize)) {
 						break;
 				}
 
 				count = (count + 1) % 3;
 			}
 
-			CloseHandle(hComPort);
+			serialPort->closeSerialPort();
 		} else {
-			Sleep(1000);
+			wait(1000);
 		}
 	}
 
 	delete[] redBuf;
 	delete[] greenBuf;
+	delete[] localBitmap;
 }
