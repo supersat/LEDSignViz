@@ -33,7 +33,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 //==============================================================================
 /**
 */
-class LedsignVizAudioProcessorEditor  : public AudioProcessorEditor, public Timer
+class LedsignVizAudioProcessorEditor  : public AudioProcessorEditor,
+										public Timer,
+										public SliderListener
 {
 public:
     LedsignVizAudioProcessorEditor (LedsignVizAudioProcessor* ownerFilter);
@@ -42,8 +44,8 @@ public:
     //==============================================================================
     // This is just a standard Juce paint method...
     void paint (Graphics& g);
-
 	void timerCallback();
+	void sliderValueChanged (Slider*);
 private:
 	int scale;
 	StringPairArray ports;
@@ -51,6 +53,10 @@ private:
 	TextButton setupButton;
 	ComboBox portSelector;
 	ComboBox signSelector;
+
+	Slider vizSelector;
+	Slider imageSelector;
+	Slider imgOpSelector;
 
 	unsigned int *localBitmap;
 };

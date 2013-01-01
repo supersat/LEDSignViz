@@ -20,6 +20,16 @@
                        isDebug="0" optimisation="2" targetName="LEDSignViz"/>
       </CONFIGURATIONS>
     </VS2010>
+    <XCODE_MAC targetFolder="Builds/MacOSX" objCExtraSuffix="f4LFeU" juceFolder="..\..\..\..\Downloads\juce\modules"
+               vstFolder="~/SDKs/vstsdk2.4" extraLinkerFlags="-L/usr/local/lib -lfftw3"
+               extraCompilerFlags="-I/usr/local/include">
+      <CONFIGURATIONS>
+        <CONFIGURATION name="Debug" isDebug="1" optimisation="1" targetName="LEDSignViz"
+                       osxSDK="default" osxCompatibility="default" osxArchitecture="default"/>
+        <CONFIGURATION name="Release" isDebug="0" optimisation="2" targetName="LEDSignViz"
+                       osxSDK="default" osxCompatibility="default" osxArchitecture="default"/>
+      </CONFIGURATIONS>
+    </XCODE_MAC>
   </EXPORTFORMATS>
   <MAINGROUP id="a47E4J" name="LEDSignViz">
     <GROUP id="{2880DE35-7C4E-E4B9-B8B0-97252F807A00}" name="Source">

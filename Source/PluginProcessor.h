@@ -42,6 +42,18 @@ enum ImageOp {
 	OVERLAY_WITH_ALPHA,
 	MULTIPLY,
 	MULTIPLY_INVERSE,
+
+	NUM_IMAGE_OPS,
+};
+
+enum VizType {
+	SPECTRUM,
+	HORIZ_SPECTROGRAM,
+	VERT_SPECTROGRAM,
+	STEREO_WAVEFORM,
+	STEREO_VU,
+
+	NUM_VIZ_TYPES,
 };
 
 class LedsignVizAudioProcessor  : public AudioProcessor
@@ -102,11 +114,13 @@ public:
 	float smoothingFactor;
 	float gamma;
 	float powerInterval;
+
+	VizType curVizType;
 private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LedsignVizAudioProcessor);
 
-	void loadImage(String filename);
+	void loadImage(File f);
 	void applyImage(unsigned int *localBitmap);
 
 	void spectrumViz(AudioSampleBuffer& buffer, unsigned int *localBitmap);

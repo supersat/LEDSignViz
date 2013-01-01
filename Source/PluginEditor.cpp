@@ -27,24 +27,32 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "PlatformSerialPortManager.h"
-#include "Windows.h"
 
 //==============================================================================
 LedsignVizAudioProcessorEditor::LedsignVizAudioProcessorEditor (LedsignVizAudioProcessor* ownerFilter)
     : AudioProcessorEditor (ownerFilter), scale(2),
 	  setupButton("Setup", "Configure the sign and communications port used"),
 	  portSelector("Port"),
-	  signSelector("Sign")
+	  signSelector("Sign"),
+	  vizSelector("Viz"),
+	  imageSelector("Image"),
+	  imgOpSelector("Image Op")
 {
 	localBitmap = new unsigned int[ownerFilter->signWidth * ownerFilter->signHeight];
-
+    
 	addAndMakeVisible(&setupButton);
 	addAndMakeVisible(&portSelector);
-	addAndMakeVisible(&signSelector);
+	//addAndMakeVisible(&signSelector);
+	addAndMakeVisible(&vizSelector);
+	addAndMakeVisible(&imageSelector);
+	addAndMakeVisible(&imgOpSelector);
 
 	setupButton.setBounds(0, 4, 50, 16);
 	portSelector.setBounds(58, 4, 120, 16);
-	signSelector.setBounds(184, 4, 120, 16);
+	//signSelector.setBounds(184, 4, 120, 16);
+	vizSelector.setBounds(184, 4, 16, 16);
+	imageSelector.setBounds(208, 4, 16, 16);
+	imgOpSelector.setBounds(232, 4, 16, 16);
 
 	setSize (scale * ownerFilter->signWidth, 24 + scale * ownerFilter->signHeight);
 	startTimer(10);
@@ -62,6 +70,18 @@ LedsignVizAudioProcessorEditor::LedsignVizAudioProcessorEditor (LedsignVizAudioP
 	portSelector.setTextWhenNoChoicesAvailable(String("No serial ports available"));
 	portSelector.setTextWhenNothingSelected(String("Select a serial port"));
 	signSelector.setTextWhenNothingSelected(String("Select a sign"));
+
+	vizSelector.setSliderStyle (Slider::Rotary);
+    vizSelector.addListener (this);
+    vizSelector.setRange (0.0, 1.0, 0.01);
+
+	imageSelector.setSliderStyle (Slider::Rotary);
+    imageSelector.addListener (this);
+    imageSelector.setRange (0.0, 1.0, 0.01);
+
+	imgOpSelector.setSliderStyle (Slider::Rotary);
+    imgOpSelector.addListener (this);
+    imgOpSelector.setRange (0.0, 1.0, 0.01);
 }
 
 LedsignVizAudioProcessorEditor::~LedsignVizAudioProcessorEditor()
@@ -100,4 +120,18 @@ void LedsignVizAudioProcessorEditor::paint (Graphics& g)
 
 void LedsignVizAudioProcessorEditor::timerCallback() {
 	repaint(0, 24, getWidth(), getHeight() - 24);
+}
+
+void LedsignVizAudioProcessorEditor::sliderValueChanged(Slider* slider)
+{
+	LedsignVizAudioProcessor* processor = (LedsignVizAudioProcessor*) getAudioProcessor();
+	if (slider == &vizSelector) {
+        processor->setParameterNotifyingHost (0, (float)vizSelector.getValue());
+    }
+    else if (slider == &imageSelector)
+    {
+        processor->setParameterNotifyingHost (1, (float)imageSelector.getValue());
+    } else if (slider == &imgOpSelector) {
+		processor->setParameterNotifyingHost (2, (float)imgOpSelector.getValue());
+	}
 }

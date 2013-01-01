@@ -75,6 +75,7 @@ bool Win32SerialPort::sendBytes(char *bytes, unsigned int numBytes)
 void Win32SerialPort::closeSerialPort()
 {
 	CloseHandle(hComPort);
+	hComPort = INVALID_HANDLE_VALUE;
 }
 
 #endif // _WIN32

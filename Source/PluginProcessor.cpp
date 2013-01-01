@@ -32,11 +32,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <algorithm>
 using namespace std;
 
-const String programNames[] = {
+
+const String vizNames[] = {
 	"Spectrum",
-	"Spectrogram",
-	"3D Spectrogram",
-	"Waveform",
+	"Horiz Spectrogram",
+	"Vert Spectrogram",
+	//"3D Spectrogram",
+	//"Waveform",
 	"Stereo Waveform",
 	"Stereo VU",
 };
@@ -54,10 +56,8 @@ Image* imageCountdown = (Image*) 0xcdcd0101;
 LedsignVizAudioProcessor::LedsignVizAudioProcessor() :
 	signWidth(200), signHeight(16), smoothingFactor(0.1f), gamma(1/2.0f),
 	powerInterval(-3.0/16), serialThread(this), currentProgram(0),
-	curImage(0), curImageOp(NONE)
+	curImage(0), curImageOp(NONE), curVizType(SPECTRUM)
 {
-	curImageOp = OVERLAY_WITH_ALPHA;
-	curImage = imageCountdown;
 }
 
 LedsignVizAudioProcessor::~LedsignVizAudioProcessor()
@@ -72,26 +72,91 @@ const String LedsignVizAudioProcessor::getName() const
 
 int LedsignVizAudioProcessor::getNumParameters()
 {
-    return 0;
+    return 3;
 }
 
 float LedsignVizAudioProcessor::getParameter (int index)
 {
-    return 0.0f;
+	switch (index) {
+	case 0:
+		return (float)curVizType / (float)VizType::NUM_VIZ_TYPES;
+	case 1:
+		if (curImage == imageCountdown)
+			return 0.0f;
+
+		for (int i = 0; i < images.size(); i++) {
+			if (curImage == &images.at(i)) {
+				return ((float)i + 1) / (images.size() + 1);
+			}
+		}
+		return 0.0f;
+		break;
+	case 2:
+		return (float)curImageOp / (float)ImageOp::NUM_IMAGE_OPS;
+	default:
+		return 0.0f;
+	}
 }
 
 void LedsignVizAudioProcessor::setParameter (int index, float newValue)
 {
+	int imgIdx;
+
+	if (newValue == 1.0f)
+		newValue = .99f;
+
+	switch (index) {
+	case 0:
+		curVizType = (VizType)(int)(newValue * (float)VizType::NUM_VIZ_TYPES);
+		break;
+	case 1:
+		imgIdx = newValue * (images.size() + 1);
+		if (imgIdx == 0)
+			curImage = imageCountdown;
+		else
+			curImage = &images.at(imgIdx);
+		break;
+	case 2:
+		curImageOp = (ImageOp)(int)(newValue * (float)ImageOp::NUM_IMAGE_OPS);
+		break;
+	}
 }
 
 const String LedsignVizAudioProcessor::getParameterName (int index)
 {
-	return String::empty;
+	switch (index) {
+	case 0:
+		return String("Viz Type");
+	case 1:
+		return String("Image");
+	case 2:
+		return String("Image Op");
+	default:
+		return String::empty;
+	}
 }
 
 const String LedsignVizAudioProcessor::getParameterText (int index)
 {
-	return String::empty;
+	switch (index) {
+	case 0:
+		return String(vizNames[curVizType]);
+	case 1:
+		if (curImage == imageCountdown)
+			return String("Countdown");
+
+		for (int i = 0; i < images.size(); i++) {
+			if (curImage == &images.at(i)) {
+				return String(((float)i + 1) / (images.size() + 1));
+			}
+		}
+		return String("Unknown");
+	case 2:
+		return String(imageOpNames[curImageOp]);
+		break;
+	default:
+		return String::empty;
+	}
 }
 
 const String LedsignVizAudioProcessor::getInputChannelName (int channelIndex) const
@@ -134,7 +199,7 @@ bool LedsignVizAudioProcessor::producesMidi() const
 
 int LedsignVizAudioProcessor::getNumPrograms()
 {
-    return sizeof(programNames)/sizeof(programNames[0]);
+    return 0;
 }
 
 int LedsignVizAudioProcessor::getCurrentProgram()
@@ -149,7 +214,7 @@ void LedsignVizAudioProcessor::setCurrentProgram (int index)
 
 const String LedsignVizAudioProcessor::getProgramName (int index)
 {
-    return programNames[index];
+	return String::empty;
 }
 
 void LedsignVizAudioProcessor::changeProgramName (int index, const String& newName)
@@ -180,6 +245,11 @@ void LedsignVizAudioProcessor::prepareToPlay (double sampleRate, int samplesPerB
 
 	//loadImage(String("c:\\Users\\supersat\\Pictures\\dj peter henry 200 - 4.png"));
 	//loadImage(String("c:\\Users\\supersat\\Pictures\\supersat2.png"));
+	for (int i = 0; i < 15; i++) {
+		char filename[128];
+		sprintf(filename, "ledsignviz-%02d.png", i);
+		loadImage(File::getSpecialLocation(File::SpecialLocationType::userHomeDirectory).getChildFile(filename));
+	}
 
 	serialThread.startThread();
 }
@@ -202,11 +272,23 @@ void LedsignVizAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuff
 	unsigned int *localBitmap = new unsigned int[signWidth * signHeight];
 	memset(localBitmap, 0, signWidth * signHeight * sizeof(unsigned int));
 
-	spectrumViz(buffer, localBitmap);
-	//horizontalSpectrogramViz(buffer, localBitmap);
-	//verticalSpectrogramViz(buffer, localBitmap);
-	//stereoWaveform(buffer, localBitmap);
-	//stereoVU(buffer, localBitmap);
+	switch (curVizType) {
+	case VizType::SPECTRUM:
+		spectrumViz(buffer, localBitmap);
+		break;
+	case VizType::HORIZ_SPECTROGRAM:
+		horizontalSpectrogramViz(buffer, localBitmap);
+		break;
+	case VizType::VERT_SPECTROGRAM:
+		verticalSpectrogramViz(buffer, localBitmap);
+		break;
+	case VizType::STEREO_WAVEFORM:
+		stereoWaveform(buffer, localBitmap);
+		break;
+	case VizType::STEREO_VU:
+		stereoVU(buffer, localBitmap);
+		break;
+	}
 	applyImage(localBitmap);
 
 	bitmapLock.enter();
@@ -468,6 +550,8 @@ void LedsignVizAudioProcessor::applyImage(unsigned int *localBitmap)
 
 		g.setColour(Colour(255, 0, 0));
 		g.drawText(buf, 0, 0, signWidth, signHeight / 4, Justification::topRight, false);
+	} else {
+		srcImg = curImage;
 	}
 
 	for (int y = 0; y < srcImg->getHeight() && y < signHeight; y++) {
@@ -529,10 +613,11 @@ void LedsignVizAudioProcessor::setStateInformation (const void* data, int sizeIn
     // whose contents will have been created by the getStateInformation() call.
 }
 
-void LedsignVizAudioProcessor::loadImage(String filename)
+void LedsignVizAudioProcessor::loadImage(File f)
 {
-	images.push_back(ImageFileFormat::loadFrom(File(filename)));
-	curImage = &(images.at(1));
+	if (f.exists()) {
+		images.push_back(ImageFileFormat::loadFrom(f));
+	}
 }
 
 //==============================================================================

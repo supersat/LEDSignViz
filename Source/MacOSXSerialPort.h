@@ -28,6 +28,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define __MACOSXSERIALPORT_H__
 
 #include "PlatformSerialPort.h"
+#include <termios.h>
 #include <string>
 
 class MacOSXSerialPort : public PlatformSerialPort

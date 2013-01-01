@@ -51,11 +51,11 @@ void LedsignVizSerialThread::run() {
 	int count = 0;
 
 	while (!threadShouldExit()) {
-		if (serialPort->openSerialPort("\\\\.\\COM15")) {
+		if (serialPort->openSerialPort("\\\\.\\COM14")) {
 
 			while (!threadShouldExit()) {
 				processor->bitmapLock.enter();
-				memcpy(localBitmap, processor->bitmap, sizeof(localBitmap));
+				memcpy(localBitmap, processor->bitmap, processor->signWidth * processor->signHeight * sizeof(unsigned int));
 				processor->bitmapLock.exit();
 
 				memset(redBuf, 0, bufSize);
@@ -66,9 +66,9 @@ void LedsignVizSerialThread::run() {
 						unsigned int color = localBitmap[(processor->signHeight - y - 1) * processor->signWidth + x];
 
 						if ((color & 0xc000) > (count << 14))
-							redBuf[(processor->signWidth / 8) * y + (x / 8)] |= 1 << (7 - (x % 8));
-						if ((color & 0xc0) > (count << 6))
 							greenBuf[(processor->signWidth / 8) * y + (x / 8)] |= 1 << (7 - (x % 8));
+						if ((color & 0xc0) > (count << 6))
+							redBuf[(processor->signWidth / 8) * y + (x / 8)] |= 1 << (7 - (x % 8));
 					}
 				}
 

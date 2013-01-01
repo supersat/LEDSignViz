@@ -29,6 +29,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 Win32SerialPortManager theManager;
 #endif
 #if defined(__APPLE__) && defined(__MACH__)
+#include "MacOSXSerialPortManager.h"
 MacOSXSerialPortManager theManager;
 #endif
 
