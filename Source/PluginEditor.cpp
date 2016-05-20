@@ -30,7 +30,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 //==============================================================================
 LedsignVizAudioProcessorEditor::LedsignVizAudioProcessorEditor (LedsignVizAudioProcessor* ownerFilter)
-    : AudioProcessorEditor (ownerFilter), scale(2),
+    : AudioProcessorEditor (ownerFilter), scale(8),
 	  setupButton("Setup", "Configure the sign and communications port used"),
 	  portSelector("Port"),
 	  signSelector("Sign"),

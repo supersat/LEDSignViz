@@ -30,6 +30,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <math.h>
 #include <time.h>
 #include <algorithm>
+#include <WinSock2.h>
+#include <WS2tcpip.h>
 using namespace std;
 
 
@@ -54,14 +56,21 @@ Image* imageCountdown = (Image*) 0xcdcd0101;
 
 //==============================================================================
 LedsignVizAudioProcessor::LedsignVizAudioProcessor() :
-	signWidth(200), signHeight(16), smoothingFactor(0.1f), gamma(1/2.0f),
+	//signWidth(200), signHeight(16), smoothingFactor(0.1f), gamma(2.0f),
+	signWidth(16), signHeight(5), smoothingFactor(0.1f), gamma(2.0f),
 	powerInterval(-3.0/16), serialThread(this), currentProgram(0),
 	curImage(0), curImageOp(NONE), curVizType(SPECTRUM)
 {
+	ledSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	memset(&ledDest, 0, sizeof(ledDest));
+	ledDest.sin_family = AF_INET;
+	ledDest.sin_port = htons(31337);
+	ledDest.sin_addr.S_un.S_addr = inet_addr("192.168.4.1");
 }
 
 LedsignVizAudioProcessor::~LedsignVizAudioProcessor()
 {
+	closesocket(ledSocket);
 }
 
 //==============================================================================
@@ -224,11 +233,15 @@ void LedsignVizAudioProcessor::changeProgramName (int index, const String& newNa
 //==============================================================================
 void LedsignVizAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-	fftRollingAvg = new float[samplesPerBlock / 2];
+	//fftRollingAvg = new float[samplesPerBlock / 2];
+	fftRollingAvg = new float[signWidth]; // This is now done per-bin
+	fftRollingAvgL1 = new float[22]; // This is now done per-bin
 	bitmap = new unsigned int[signWidth * signHeight];
 	preImageBitmap = new unsigned int[signWidth * signHeight];
 
-	memset(fftRollingAvg, 0, sizeof(float) * samplesPerBlock / 2);
+	//memset(fftRollingAvg, 0, sizeof(float) * samplesPerBlock / 2);
+	memset(fftRollingAvg, 0, sizeof(float) * signWidth);
+	memset(fftRollingAvgL1, 0, sizeof(float) * 22);
 	memset(bitmap, 0, signWidth * signHeight * sizeof(unsigned int));
 
 	fftIn = (fftwf_complex *)fftwf_malloc(sizeof(fftw_complex) * samplesPerBlock);
@@ -259,6 +272,7 @@ void LedsignVizAudioProcessor::releaseResources()
 	serialThread.stopThread(1000);
 
 	delete[] fftRollingAvg;
+	delete[] fftRollingAvgL1;
 	delete[] windowFunction;
 	fftwf_destroy_plan(fftPlan);
 	fftwf_free(fftIn);
@@ -291,6 +305,14 @@ void LedsignVizAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuff
 	}
 	applyImage(localBitmap);
 
+	char ledBuf[16 * 5 * 3];
+	for (int i = 0; i < (16 * 5); i++) {
+		ledBuf[i * 3] = localBitmap[i] & 0xff;
+		ledBuf[i * 3 + 1] = (localBitmap[i] >> 8) & 0xff;
+		ledBuf[i * 3 + 2] = (localBitmap[i] >> 16) & 0xff;
+	}
+	sendto(ledSocket, ledBuf, sizeof(ledBuf), 0, (const sockaddr *)&ledDest, sizeof(ledDest));
+
 	bitmapLock.enter();
 	memcpy(bitmap, localBitmap, signWidth * signHeight * sizeof(unsigned int));
 	bitmapLock.exit();
@@ -305,7 +327,56 @@ void LedsignVizAudioProcessor::processBlock (AudioSampleBuffer& buffer, MidiBuff
     }
 }
 
-void LedsignVizAudioProcessor::spectrumViz(AudioSampleBuffer& buffer, unsigned int *localBitmap)
+static void HSVtoRGB( float *r, float *g, float *b, float h, float s, float v )
+{
+	int i;
+	float f, p, q, t;
+	if( s == 0 ) {
+		// achromatic (grey)
+		*r = *g = *b = v;
+		return;
+	}
+	h /= 60;			// sector 0 to 5
+	i = floor( h );
+	f = h - i;			// factorial part of h
+	p = v * ( 1 - s );
+	q = v * ( 1 - s * f );
+	t = v * ( 1 - s * ( 1 - f ) );
+	switch( i ) {
+		case 0:
+			*r = v;
+			*g = t;
+			*b = p;
+			break;
+		case 1:
+			*r = q;
+			*g = v;
+			*b = p;
+			break;
+		case 2:
+			*r = p;
+			*g = v;
+			*b = t;
+			break;
+		case 3:
+			*r = p;
+			*g = q;
+			*b = v;
+			break;
+		case 4:
+			*r = t;
+			*g = p;
+			*b = v;
+			break;
+		default:		// case 5:
+			*r = v;
+			*g = p;
+			*b = q;
+			break;
+	}
+}
+
+void LedsignVizAudioProcessor::fftToBins(AudioSampleBuffer& buffer, float* bandPower, int nBins)
 {
 	memset(fftIn, 0, sizeof(fftw_complex) * buffer.getNumSamples());
 
@@ -322,12 +393,44 @@ void LedsignVizAudioProcessor::spectrumViz(AudioSampleBuffer& buffer, unsigned i
 
 	fftwf_execute(fftPlan);
 
-	//float spectrum[MAX_FFT_SAMPLES / 2];
-	//fft.getSpectrum(monoSamples, 0, nSamples, spectrum, nSamples, 0, 1, SpectrumFFT::FFT_WINDOW_BLACKMANHARRIS);
+	memset(bandPower, 0, sizeof(float) * nBins);
 
-	float bandPower[200]; // TODO(supersat): Remove constant
-	memset(bandPower, 0, sizeof(bandPower));
+	// Adapted from DLBFFT, under the LGPL
+	int freqs = buffer.getNumSamples() / 2;
+	int f_start = 0;
 
+	for (int i = 0; i < nBins; i++) {
+		int f_end = floor((powf(((float)(i + 1)) /
+			(float)nBins, gamma) * freqs) + 0.5);
+		int f_width;
+		int j;
+		float bin_power = 0.0f;
+
+		if (f_end > freqs)
+			f_end = freqs;
+
+		f_width = f_end - f_start;
+		if (f_width <= 0)
+			f_width = 1;
+
+		for (j = 0; j < f_width; j++) {
+			float p = sqrt(fftOut[f_start + j][0] * fftOut[f_start + j][0] + fftOut[f_start + j][1] * fftOut[f_start + j][1]);
+
+			//if (p > bin_power)
+				bin_power += p;
+		}
+
+		//bin_power = log(bin_power);
+		//if (bin_power < 0.0f)
+		//	bin_power = 0.0f;
+
+		bandPower[i] = fftRollingAvg[i] = fftRollingAvg[i] * smoothingFactor +
+			(bin_power /* 0.05 */ * (1.0f - smoothingFactor));
+		//bandPower[i] = bin_power * 0.05;
+
+		f_start = f_end;
+	}
+	/*
 	for (int i = 0; i < buffer.getNumSamples() / 2; i++) {
 		float specPower = sqrt(fftOut[i][0] * fftOut[i][0] + fftOut[i][1] * fftOut[i][1]);
 		fftRollingAvg[i] = fftRollingAvg[i] * smoothingFactor + specPower * (1 - smoothingFactor);
@@ -335,6 +438,67 @@ void LedsignVizAudioProcessor::spectrumViz(AudioSampleBuffer& buffer, unsigned i
 		int band = (int)(powf((float)i / (buffer.getNumSamples() / 2), gamma) * signWidth);
 		bandPower[band] += fftRollingAvg[i];
 	}
+	*/
+
+	// LayerOne HACK!!!
+	// Adapted from DLBFFT, under the LGPL
+	/*
+	float ledBandPower[22];
+	char buf[66];
+	f_start = 0;
+
+	for (int i = 0; i < 22; i++) {
+		int f_end = floor((powf(((float)(i + 1)) /
+			(float)22, gamma) * freqs) + 0.5);
+		int f_width;
+		int j;
+		float bin_power = 0.0f;
+
+		if (f_end > freqs)
+			f_end = freqs;
+
+		f_width = f_end - f_start;
+		if (f_width <= 0)
+			f_width = 1;
+
+		for (j = 0; j < f_width; j++) {
+			float p = sqrt(fftOut[f_start + j][0] * fftOut[f_start + j][0] + fftOut[f_start + j][1] * fftOut[f_start + j][1]);
+
+			//if (p > bin_power)
+				bin_power += p;
+		}
+
+		//bin_power = log(bin_power);
+		//if (bin_power < 0.0f)
+		//	bin_power = 0.0f;
+
+		ledBandPower[i] = fftRollingAvg[i] = fftRollingAvg[i] * smoothingFactor +
+			(bin_power * (1.0f - smoothingFactor));
+		//bandPower[i] = bin_power * 0.05;
+
+		f_start = f_end;
+	}
+
+	float r, g, b;
+	int bufPtr = 0;
+	for (int i = 0; i < 22; i++) {
+		float h = max(min((log10(ledBandPower[i] / 128) + 2) / 2, 1.0f), 0.0f);
+		HSVtoRGB(&r, &g, &b, 0.5, 1.0, 1.0);
+		buf[bufPtr++] = r * 255;
+		buf[bufPtr++] = g * 255;
+		buf[bufPtr++] = b * 255;
+	}
+	*/
+	
+}
+
+void LedsignVizAudioProcessor::spectrumViz(AudioSampleBuffer& buffer, unsigned int *localBitmap)
+{
+	float* bandPower = new float[signWidth];
+	fftToBins(buffer, bandPower, signWidth);
+
+	//float spectrum[MAX_FFT_SAMPLES / 2];
+	//fft.getSpectrum(monoSamples, 0, nSamples, spectrum, nSamples, 0, 1, SpectrumFFT::FFT_WINDOW_BLACKMANHARRIS);
 
 	for (int x = 0; x < signWidth; x++) {
 		float freqPower = log10(bandPower[x] / 90);
@@ -346,34 +510,14 @@ void LedsignVizAudioProcessor::spectrumViz(AudioSampleBuffer& buffer, unsigned i
 			}
 		}
 	}
+
+	delete[] bandPower;
 }
 
 void LedsignVizAudioProcessor::horizontalSpectrogramViz(AudioSampleBuffer& buffer, unsigned int *localBitmap)
 {
-	memset(fftIn, 0, sizeof(fftw_complex) * buffer.getNumSamples());
-
-	for (int channel = 0; channel < getNumInputChannels(); ++channel){
-        float* channelData = buffer.getSampleData (channel);
-		for (int i = 0; i < buffer.getNumSamples(); i++) {
-			fftIn[i][0] += channelData[i];
-		}
-	}
-	
-	for (int i = 0; i < buffer.getNumSamples(); i++) {
-		fftIn[i][0] = windowFunction[i] * (fftIn[i][0] / getNumInputChannels());
-	}
-
-	fftwf_execute(fftPlan);
-
-	float bandPower[200]; // TODO(supersat): Remove constant
-	memset(bandPower, 0, sizeof(bandPower));
-
-	for (int i = 0; i < buffer.getNumSamples() / 2; i++) {
-		float specPower = sqrt(fftOut[i][0] * fftOut[i][0] + fftOut[i][1] * fftOut[i][1]);
-		// This is pseudo-logarithmic. See http://dlbeer.co.nz/articles/fftvis.html
-		int band = (int)(powf((float)i / (buffer.getNumSamples() / 2), gamma) * signHeight);
-		bandPower[band] += specPower;
-	}
+	float* bandPower = new float[signWidth];
+	fftToBins(buffer, bandPower, signWidth);
 
 	if (curImageOp != NONE) {
 		for (int y = 0; y < signHeight; y++) {
@@ -405,30 +549,8 @@ void LedsignVizAudioProcessor::horizontalSpectrogramViz(AudioSampleBuffer& buffe
 
 void LedsignVizAudioProcessor::verticalSpectrogramViz(AudioSampleBuffer& buffer, unsigned int *localBitmap)
 {
-	memset(fftIn, 0, sizeof(fftw_complex) * buffer.getNumSamples());
-
-	for (int channel = 0; channel < getNumInputChannels(); ++channel){
-        float* channelData = buffer.getSampleData (channel);
-		for (int i = 0; i < buffer.getNumSamples(); i++) {
-			fftIn[i][0] += channelData[i];
-		}
-	}
-	
-	for (int i = 0; i < buffer.getNumSamples(); i++) {
-		fftIn[i][0] = windowFunction[i] * (fftIn[i][0] / getNumInputChannels());
-	}
-
-	fftwf_execute(fftPlan);
-
-	float bandPower[200]; // TODO(supersat): Remove constant
-	memset(bandPower, 0, sizeof(bandPower));
-
-	for (int i = 0; i < buffer.getNumSamples() / 2; i++) {
-		float specPower = sqrt(fftOut[i][0] * fftOut[i][0] + fftOut[i][1] * fftOut[i][1]);
-		// This is pseudo-logarithmic. See http://dlbeer.co.nz/articles/fftvis.html
-		int band = (int)(powf((float)i / (buffer.getNumSamples() / 2), gamma) * signWidth);
-		bandPower[band] += specPower;
-	}
+	float* bandPower = new float[signWidth];
+	fftToBins(buffer, bandPower, signWidth);
 
 	if (curImageOp != NONE) {
 		for (int y = 0; y < signHeight - 1; y++) {
@@ -548,8 +670,8 @@ void LedsignVizAudioProcessor::applyImage(unsigned int *localBitmap)
 		}
 		cp += sprintf(cp, "%02d:%02d", secsUntilMidnight / 60, secsUntilMidnight % 60);
 
-		g.setColour(Colour(255, 0, 0));
-		g.drawText(buf, 0, 0, signWidth, signHeight / 4, Justification::topRight, false);
+		g.setColour(Colour(255, 255, 255));
+		g.drawText(buf, 0, 0, signWidth, signHeight, Justification::centred, false);
 	} else {
 		srcImg = curImage;
 	}

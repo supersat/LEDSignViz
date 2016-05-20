@@ -32,6 +32,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "SerialThread.h"
 #include <fftw3.h>
 #include <vector>
+#include <WinSock2.h>
 
 //==============================================================================
 /**
@@ -123,6 +124,8 @@ private:
 	void loadImage(File f);
 	void applyImage(unsigned int *localBitmap);
 
+	void fftToBins(AudioSampleBuffer& buffer, float* bandPower, int nBins);
+
 	void spectrumViz(AudioSampleBuffer& buffer, unsigned int *localBitmap);
 	void horizontalSpectrogramViz(AudioSampleBuffer& buffer, unsigned int *localBitmap);
 	void verticalSpectrogramViz(AudioSampleBuffer& buffer, unsigned int *localBitmap);
@@ -144,6 +147,10 @@ private:
 	Image *curImage;
 
 	LedsignVizSerialThread serialThread;
+
+	float *fftRollingAvgL1;
+	int ledSocket;
+	struct sockaddr_in ledDest;
 };
 
 #endif  // __PLUGINPROCESSOR_H_2944184C__
