@@ -31,10 +31,18 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "Win32SerialPort.h"
 #endif
 
+#ifdef __APPLE__
+#include "MacOSXSerialPort.h"
+#endif
+
 LedsignVizSerialThread::LedsignVizSerialThread(LedsignVizAudioProcessor* owner) : Thread("Serial Port Thread"), processor(owner)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
 	serialPort = new Win32SerialPort();
+#elif defined(__APPLE__)
+    serialPort = new MacOSXSerialPort();
+#else
+#error Unknown platform
 #endif
 }
 

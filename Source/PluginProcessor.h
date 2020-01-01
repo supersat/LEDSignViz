@@ -89,6 +89,9 @@ public:
     bool isInputChannelStereoPair (int index) const;
     bool isOutputChannelStereoPair (int index) const;
 
+    bool silenceInProducesSilenceOut() const;
+    double getTailLengthSeconds() const;
+
     bool acceptsMidi() const;
     bool producesMidi() const;
 
@@ -122,6 +125,8 @@ private:
 
 	void loadImage(File f);
 	void applyImage(unsigned int *localBitmap);
+
+	void fftToBins(AudioSampleBuffer& buffer, float* bandPower, int nBins);
 
 	void spectrumViz(AudioSampleBuffer& buffer, unsigned int *localBitmap);
 	void horizontalSpectrogramViz(AudioSampleBuffer& buffer, unsigned int *localBitmap);
