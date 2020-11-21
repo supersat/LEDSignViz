@@ -10,12 +10,16 @@
 
 #if defined(__APPLE__) && defined(__MACH__)
 
-#include "MacOSXSerialPortManager.h"
-#include "MacOSXSerialPort.h"
-
 #include <IOKit/IOKitLib.h>
 #include <IOKit/serial/IOSerialKeys.h>
 #include <IOKit/IOBSD.h>
+
+#include "MacOSXSerialPortManager.h"
+#include "MacOSXSerialPort.h"
+
+MacOSXSerialPortManager::~MacOSXSerialPortManager()
+{
+}
 
 StringPairArray MacOSXSerialPortManager::getSerialPorts()
 {
@@ -41,10 +45,26 @@ StringPairArray MacOSXSerialPortManager::getSerialPorts()
     }
 
     while ((portService = IOIteratorNext(serialPortIterator))) {
+        String pathStr;
+        const char *pathCStr;
         CFTypeRef devPathCFString =
             IORegistryEntryCreateCFProperty(portService, CFSTR(kIOTTYDeviceKey), kCFAllocatorDefault, 0);
-        const char* path = CFStringGetCStringPtr(static_cast<CFStringRef>(devPathCFString), kCFStringEncodingASCII);
-        ports.set(String(path), String(path));
+
+        pathCStr = CFStringGetCStringPtr(static_cast<CFStringRef>(devPathCFString), kCFStringEncodingUTF8);
+        if (!pathCStr) {
+            pathCStr = CFStringGetCStringPtr(static_cast<CFStringRef>(devPathCFString), kCFStringEncodingASCII);
+        }
+        if (pathCStr) {
+            pathStr = String(pathCStr);
+        } else {
+            CFIndex pathLen = CFStringGetLength(static_cast<CFStringRef>(devPathCFString)) + 1;
+            pathCStr = (const char *)malloc(pathLen);
+            CFStringGetCString(static_cast<CFStringRef>(devPathCFString),
+                               (char *)pathCStr, pathLen, kCFStringEncodingUTF8);
+            pathStr = String(pathCStr);
+            free((void *)pathCStr);
+        }
+        ports.set(pathStr, pathStr);
         CFRelease(devPathCFString);
         IOObjectRelease(portService);
     }

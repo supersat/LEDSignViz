@@ -3,9 +3,9 @@
 
 LEDSignViz -- A VST/AU plugin for visualizing music on supported LED signs.
 
-MacOSXSerialPort.cpp: OS X-specific serial port support.
+MacOSXSerialPort.cpp: macOS-specific serial port support.
 
-Copyright (C) 2012  Karl Koscher
+Copyright (C) 2012-2020  Karl Koscher
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -31,6 +31,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
+#include <memory.h>
 #include <termios.h>
 #include <unistd.h>
 #include <IOKit/serial/ioss.h>
@@ -47,32 +48,41 @@ MacOSXSerialPort::~MacOSXSerialPort()
 
 bool MacOSXSerialPort::openSerialPort(const String& identifier)
 {
-	fd = open(identifier.getCharPointer(), O_RDWR | O_SYNC | O_NOCTTY);
+	speed_t speed = 2000000;
+	struct termios attrs;
+
+	fd = open(identifier.getCharPointer(), O_RDWR | O_NONBLOCK | O_NOCTTY);
 	if (fd == -1)
 		return false;
 	
-	ioctl(fd, TIOCEXCL);
-
-	struct termios attrs;
+	if (ioctl(fd, TIOCEXCL) == -1)
+		goto error;
+	if (fcntl(fd, F_SETFL, 0) == -1)
+		goto error;
 
 	tcgetattr(fd, &attrs);
 	memcpy(&savedAttrs, &attrs, sizeof(savedAttrs));
 
 	attrs.c_iflag = 0;
 	attrs.c_oflag = 0;
-	attrs.c_cflag = CS8 | CLOCAL | CREAD | CRTSCTS;
+	attrs.c_cflag = CS8 | CLOCAL | CCTS_OFLOW | CRTS_IFLOW;
 	attrs.c_lflag = 0;
-	attrs.c_cc[VMIN] = 1;
-	attrs.c_cc[VTIME] = 0;
-	tcsetattr(fd, TCSANOW, &attrs);
+	attrs.c_cc[VMIN] = 0;
+	attrs.c_cc[VTIME] = 1;
+	if (tcsetattr(fd, TCSANOW, &attrs) == -1)
+		goto error;
 
-	speed_t speed = 2000000;
-	if (ioctl(fd, IOSSIOSPEED, &speed) == -1) {
-		closeSerialPort();
-		return false;
-	}
+	if (ioctl(fd, IOSSIOSPEED, &speed) == -1)
+		goto error;
+
+	tcflush(fd, TCIOFLUSH);
+	tcflow(fd, TCOON);
 
 	return true;
+
+error:
+	closeSerialPort();
+	return false;
 }
 
 bool MacOSXSerialPort::sendBytes(char *bytes, unsigned int numBytes)
@@ -82,7 +92,8 @@ bool MacOSXSerialPort::sendBytes(char *bytes, unsigned int numBytes)
 
 void MacOSXSerialPort::closeSerialPort()
 {
-	tcsetattr(fd, TCSADRAIN, &savedAttrs);
+	//tcsetattr(fd, TCSADRAIN, &savedAttrs);
+	tcsetattr(fd, TCSANOW, &savedAttrs);
 	close(fd);
 }
 

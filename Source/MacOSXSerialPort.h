@@ -5,7 +5,7 @@ LEDSignViz -- A VST/AU plugin for visualizing music on supported LED signs.
 
 MacOSXSerialPort.cpp: OS X-specific serial port support.
 
-Copyright (C) 2012  Karl Koscher
+Copyright (C) 2012-2020  Karl Koscher
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License

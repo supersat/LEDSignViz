@@ -5,7 +5,7 @@ LEDSignViz -- A VST/AU plugin for visualizing music on supported LED signs.
 
 Win32SerialPort.cpp: Win32-specific serial port support.
 
-Copyright (C) 2012  Karl Koscher
+Copyright (C) 2012-2020  Karl Koscher
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -54,7 +54,7 @@ bool Win32SerialPort::openSerialPort(const String& identifier)
 		dcb.fParity = FALSE;
 		dcb.StopBits = ONESTOPBIT;
 		dcb.Parity = NOPARITY;
-		dcb.fOutxDsrFlow = TRUE;
+		dcb.fOutxCtsFlow = TRUE;
 		SetCommState(hComPort, &dcb);
 		return true;
 	}

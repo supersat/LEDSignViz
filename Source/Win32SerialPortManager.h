@@ -5,7 +5,7 @@ LEDSignViz -- A VST/AU plugin for visualizing music on supported LED signs.
 
 Win32SerialPortManager.h: Win32-specific implementation of PlatformSerialPortManager.
 
-Copyright (C) 2012  Karl Koscher
+Copyright (C) 2012-2020  Karl Koscher
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -32,6 +32,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 class Win32SerialPortManager : public PlatformSerialPortManager
 {
 public:
+    virtual ~Win32SerialPortManager();
 	virtual StringPairArray getSerialPorts();
 	virtual PlatformSerialPort* createAndOpenSerialPort(const String& identifier);
 };

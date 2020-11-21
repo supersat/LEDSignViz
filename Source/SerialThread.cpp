@@ -59,7 +59,7 @@ void LedsignVizSerialThread::run() {
 	int count = 0;
 
 	while (!threadShouldExit()) {
-		if (serialPort->openSerialPort("\\\\.\\COM14")) {
+		if (serialPort->openSerialPort("/dev/cu.usbserial-A9007UN0")) {
 
 			while (!threadShouldExit()) {
 				processor->bitmapLock.enter();

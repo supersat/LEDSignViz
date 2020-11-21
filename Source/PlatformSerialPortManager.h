@@ -5,7 +5,7 @@ LEDSignViz -- A VST/AU plugin for visualizing music on supported LED signs.
 
 PlatformSerialPortManager.h: An interface to enumerate and open serial ports.
 
-Copyright (C) 2012  Karl Koscher
+Copyright (C) 2012-2020  Karl Koscher
 
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
@@ -34,6 +34,7 @@ class PlatformSerialPort;
 class PlatformSerialPortManager
 {
 public:
+	virtual ~PlatformSerialPortManager();
 	virtual StringPairArray getSerialPorts() = 0;
 	virtual PlatformSerialPort* createAndOpenSerialPort(const String& identifier) = 0;
 

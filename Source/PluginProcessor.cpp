@@ -132,7 +132,7 @@ const String LedsignVizAudioProcessor::getParameterName (int index)
 	case 2:
 		return String("Image Op");
 	default:
-		return String::empty;
+		return String("");
 	}
 }
 
@@ -155,7 +155,7 @@ const String LedsignVizAudioProcessor::getParameterText (int index)
 		return String(imageOpNames[curImageOp]);
 		break;
 	default:
-		return String::empty;
+		return String("");
 	}
 }
 
@@ -224,7 +224,7 @@ void LedsignVizAudioProcessor::setCurrentProgram (int index)
 
 const String LedsignVizAudioProcessor::getProgramName (int index)
 {
-	return String::empty;
+	return String("");
 }
 
 void LedsignVizAudioProcessor::changeProgramName (int index, const String& newName)

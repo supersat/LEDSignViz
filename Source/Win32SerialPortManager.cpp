@@ -18,6 +18,10 @@ This code is based on enumser by by PJ Naughter.
 
 static const GUID comPortInterfaceGUID = { 0x86E0D1E0L, 0x8089, 0x11D0, { 0x9C, 0xE4, 0x08, 0x00, 0x3E, 0x30, 0x1F, 0x73 } };
 
+Win32SerialPortManager::~Win32SerialPortManager()
+{
+}
+
 StringPairArray Win32SerialPortManager::getSerialPorts()
 {
 	StringPairArray ports;
